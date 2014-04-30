@@ -85,7 +85,7 @@ CssTools = {
   rewriteCssUrls: function (ast) {
 
     var isRelative = function(path) {
-      return path.charAt(0) !== '/';
+      return path && path.charAt(0) !== '/';
     };
 
     _.each(ast.stylesheet.rules, function(rule, ruleIndex) {
@@ -101,19 +101,25 @@ CssTools = {
         //   background: top center url("background.png") black;
         // or even multiple url(), for instance for multiple backgrounds.
         var cssUrlRegex = /url\s*\(\s*(['"]?)(.+?)\1\s*\)/gi;
-        while (parts = cssUrlRegex.exec(value)) {
-          oldCssUrl = parts[0];
-          quotes = parts[1];
-          resource = url.parse(parts[2]);
+        try {
+          while (parts = cssUrlRegex.exec(value)) {
+            oldCssUrl = parts[0];
+            quotes = parts[1];
+            resource = url.parse(parts[2]);
 
-          // Rewrite relative paths to absolute paths.
-          // We don't rewrite urls starting with a protocol definition such as
-          // http, https, or data.
-          if (isRelative(resource.path) && resource.protocol === null) {
-            absolutePath = path.join(basePath, resource.path);
-            newCssUrl = "url(" + quotes + absolutePath + quotes + ")";
-            value = value.replace(oldCssUrl, newCssUrl);
+            // Rewrite relative paths to absolute paths.
+            // We don't rewrite urls starting with a protocol definition such as
+            // http, https, or data.
+            if (isRelative(resource.path) && resource.protocol === null) {
+              absolutePath = path.join(basePath, resource.path);
+              newCssUrl = "url(" + quotes + absolutePath + quotes + ")";
+              value = value.replace(oldCssUrl, newCssUrl);
+            }
           }
+        } catch (err) {
+          console.log("Failed to rewrite a relative url in %s", rule.position.source);
+          console.log("        %s", value);
+          console.log(err.stack || err)
         }
 
         declaration.value = value;
